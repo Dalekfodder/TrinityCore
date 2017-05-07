@@ -27,6 +27,7 @@
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "World.h"
+#include "ScriptMgr.h"
 
 void ObjectGridEvacuator::Visit(CreatureMapType &m)
 {
@@ -119,15 +120,47 @@ void LoadHelper(CellGuidSet const& guid_set, CellCoord &cell, GridRefManager<T> 
     for (CellGuidSet::const_iterator i_guid = guid_set.begin(); i_guid != guid_set.end(); ++i_guid)
     {
         T* obj = new T;
-        ObjectGuid::LowType guid = *i_guid;
-        //TC_LOG_INFO("misc", "DEBUG: LoadHelper from table: %s for (guid: %u) Loading", table, guid);
-        if (!obj->LoadFromDB(guid, map))
-        {
-            delete obj;
-            continue;
-        }
 
-        AddObjectHelper(cell, m, count, map, obj);
+        // Don't spawn at all if there's a respawn time
+        if ((obj->GetTypeId() == TYPEID_UNIT && !map->GetCreatureRespawnTime(*i_guid)) || (obj->GetTypeId() == TYPEID_GAMEOBJECT && !map->GetGORespawnTime(*i_guid)))
+        {
+            ObjectGuid::LowType guid = *i_guid;
+            //TC_LOG_INFO("misc", "DEBUG: LoadHelper from table: %s for (guid: %u) Loading", table, guid);
+
+            if (obj->GetTypeId() == TYPEID_UNIT)
+            {
+                // If creature in manual spawn group, don't spawn here, unless group is already active.
+                CreatureData const* cdata = sObjectMgr->GetCreatureData(guid);
+                SpawnGroupTemplateData const* group = cdata ? cdata->spawnGroupData : nullptr;
+                uint32 groupFlags = group ? group->flags : 0;
+                if ((groupFlags & SPAWNGROUP_FLAG_MANUAL_SPAWN) && !group->isActive)
+                    continue;
+
+                // If script is blocking spawn, don't spawn but queue for a re-check in a little bit
+                bool compatibleMode = !group || (groupFlags & SPAWNGROUP_FLAG_COMPATIBILITY_MODE);
+                if (!compatibleMode && !sScriptMgr->CanSpawn(guid, cdata->id, cdata, map))
+                {
+                    map->SaveRespawnTime(SPAWN_TYPE_CREATURE, guid, cdata->id, time(NULL) + urand(4,7), map->GetZoneId(cdata->GetPositionX(), cdata->GetPositionY(), cdata->GetPositionZ()), Trinity::ComputeGridCoord(cdata->GetPositionX(), cdata->GetPositionY()).GetId(), false);
+                    continue;
+                }
+            }
+            else if (obj->GetTypeId() == TYPEID_GAMEOBJECT)
+            {
+                // If gameobject in manual spawn group, don't spawn here, unless group is already active.
+                GameObjectData const* godata = sObjectMgr->GetGameObjectData(guid);
+                if (godata && godata->spawnGroupData && (godata->spawnGroupData->flags & SPAWNGROUP_FLAG_MANUAL_SPAWN) && !godata->spawnGroupData->isActive)
+                    continue;
+            }
+
+            if (!obj->LoadFromDB(guid, map, false, false))
+            {
+                delete obj;
+                continue;
+            }
+            AddObjectHelper(cell, m, count, map, obj);
+        }
+        else
+            delete obj;
     }
 }
 

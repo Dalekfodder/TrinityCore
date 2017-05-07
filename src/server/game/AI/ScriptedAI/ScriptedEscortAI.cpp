@@ -239,13 +239,17 @@ void npc_escortAI::UpdateAI(uint32 diff)
                         return;
                     }
 
-                    if (m_bCanInstantRespawn)
+                    if (m_bCanInstantRespawn && !sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC))
                     {
                         me->setDeathState(JUST_DIED);
                         me->Respawn();
                     }
                     else
+                    {
+                        if (sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC))
+                            me->GetMap()->RemoveRespawnTime(SPAWN_TYPE_CREATURE, me->GetSpawnId(), true);
                         me->DespawnOrUnsummon();
+                    }
 
                     return;
                 }
@@ -280,11 +284,21 @@ void npc_escortAI::UpdateAI(uint32 diff)
             {
                 TC_LOG_DEBUG("scripts", "EscortAI failed because player/group was to far away or not found");
 
-                if (m_bCanInstantRespawn)
+                uint32 groupFlags = 0;
+
+                if (CreatureData const* cdata = me->GetCreatureData())
+                {
+                    if (SpawnGroupTemplateData const* groupData = cdata->spawnGroupData)
+                        groupFlags = groupData->flags;
+                }
+
+                if (m_bCanInstantRespawn && !(sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) && (groupFlags & SPAWNGROUP_FLAG_ESCORTQUESTNPC)))
                 {
                     me->setDeathState(JUST_DIED);
                     me->Respawn();
                 }
+                else if (m_bCanInstantRespawn && (sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) && (groupFlags & SPAWNGROUP_FLAG_ESCORTQUESTNPC)))
+                    me->GetMap()->RemoveRespawnTime(SPAWN_TYPE_CREATURE, me->GetSpawnId(), true);
                 else
                     me->DespawnOrUnsummon();
 
@@ -424,6 +438,22 @@ void npc_escortAI::SetRun(bool on)
 /// @todo get rid of this many variables passed in function.
 void npc_escortAI::Start(bool isActiveAttacker /* = true*/, bool run /* = false */, ObjectGuid playerGUID /* = 0 */, Quest const* quest /* = nullptr */, bool instantRespawn /* = false */, bool canLoopPath /* = false */, bool resetWaypoints /* = true */)
 {
+    // Queue respawn from the point it starts
+    if (Map* map = me->GetMap())
+    {
+        if (CreatureData const* cdata = me->GetCreatureData())
+        {
+            if (SpawnGroupTemplateData const* groupdata = cdata->spawnGroupData)
+            {
+                if (sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) && (groupdata->flags & SPAWNGROUP_FLAG_ESCORTQUESTNPC) && !map->GetCreatureRespawnTime(me->GetSpawnId()))
+                {
+                    me->SetRespawnTime(me->GetRespawnDelay());
+                    me->SaveRespawnTime();
+                }
+            }
+        }
+    }
+
     if (me->GetVictim())
     {
         TC_LOG_ERROR("scripts.escortai", "TSCR ERROR: EscortAI (script: %s, creature entry: %u) attempts to Start while in combat", me->GetScriptName().c_str(), me->GetEntry());
@@ -564,6 +594,17 @@ bool npc_escortAI::GetWaypointPosition(uint32 pointId, float& x, float& y, float
             return true;
         }
     }
+
+    return false;
+}
+
+bool npc_escortAI::IsEscortNPC(bool onlyIfActive) const
+{
+    if (!onlyIfActive)
+        return true;
+
+    if (GetEventStarterGUID())
+        return true;
 
     return false;
 }
