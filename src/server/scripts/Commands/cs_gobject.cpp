@@ -38,11 +38,10 @@ EndScriptData */
 #include "RBAC.h"
 #include "WorldSession.h"
 
-struct npc_commandscript // partial declaration so we can map the spawn group command to both .npc and .gobject
-{                        // definitions are in cs_npc.cpp
-    static bool HandleNpcSpawnGroup(ChatHandler* handler, char const* args);
-    static bool HandleNpcDespawnGroup(ChatHandler* handler, char const* args);
-};
+// definitions are over in cs_npc.cpp
+bool HandleNpcSpawnGroup(ChatHandler* handler, char const* args);
+bool HandleNpcDespawnGroup(ChatHandler* handler, char const* args);
+
 class gobject_commandscript : public CommandScript
 {
 public:
@@ -69,8 +68,8 @@ public:
             { "near",         rbac::RBAC_PERM_COMMAND_GOBJECT_NEAR,         false, &HandleGameObjectNearCommand,      ""       },
             { "target",       rbac::RBAC_PERM_COMMAND_GOBJECT_TARGET,       false, &HandleGameObjectTargetCommand,    ""       },
             { "turn",         rbac::RBAC_PERM_COMMAND_GOBJECT_TURN,         false, &HandleGameObjectTurnCommand,      ""       },
-            { "spawngroup",   rbac::RBAC_PERM_COMMAND_GOBJECT_SPAWNGROUP,   false, &npc_commandscript::HandleNpcSpawnGroup, "" },
-            { "despawngroup", rbac::RBAC_PERM_COMMAND_GOBJECT_DESPAWNGROUP, false, &npc_commandscript::HandleNpcDespawnGroup,""},
+            { "spawngroup",   rbac::RBAC_PERM_COMMAND_GOBJECT_SPAWNGROUP,   false, &HandleNpcSpawnGroup, "" },
+            { "despawngroup", rbac::RBAC_PERM_COMMAND_GOBJECT_DESPAWNGROUP, false, &HandleNpcDespawnGroup,""},
             { "add",          rbac::RBAC_PERM_COMMAND_GOBJECT_ADD,          false, nullptr,         "", gobjectAddCommandTable },
             { "set",          rbac::RBAC_PERM_COMMAND_GOBJECT_SET,          false, nullptr,         "", gobjectSetCommandTable },
         };

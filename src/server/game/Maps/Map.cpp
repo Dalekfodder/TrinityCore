@@ -727,38 +727,13 @@ void Map::UpdatePlayerZoneStats(uint32 oldZone, uint32 newZone)
     if (oldZone == newZone)
         return;
 
-    uint32 oldZoneCount = 0;
-    uint32 newZoneCount = 0;
-
-    // Get old zone if exist, without creating element if not
-    auto oldItr = _zonePlayerCountMap.find(oldZone);
-    if (oldItr != _zonePlayerCountMap.end())
-        oldZoneCount = oldItr->second;
-
-    // Sanity check, we're leaving a zone (that isn't the default) and there's no players there (should be at least one)
-    if (oldZone != MAP_INVALID_ZONE && oldZoneCount == 0)
+    if (oldZone != MAP_INVALID_ZONE)
     {
-        TC_LOG_WARN("maps", "Player left zone %u, when no players in zone!", oldZone);
-        return;
+        uint32& oldZoneCount = _zonePlayerCountMap[oldZone];
+        ASSERT(oldZoneCount, "A player left zone %u (went to %u) - but there were no players in the zone!", oldZone, newZone);
+        --oldZoneCount;
     }
-
-    // Get new zone if exist, without creating element if not
-    auto newItr = _zonePlayerCountMap.find(newZone);
-    if (newItr != _zonePlayerCountMap.end())
-        newZoneCount = newItr->second;
-
-    // If there is already a count then the iterator will exist, use it to subtract one.
-    // If there was only one (us) delete the element entirely.
-    if (oldZone != MAP_INVALID_ZONE && oldZoneCount > 1)
-        oldItr->second--;
-    else if (oldZone != MAP_INVALID_ZONE && oldZoneCount == 1)
-        _zonePlayerCountMap.erase(oldItr);
-
-    // If we already have an iterator (already players in the area) increment. Otherwise, add to map
-    if (newZone != MAP_INVALID_ZONE && newZoneCount > 0)
-        newItr->second++;
-    else if (newZone != MAP_INVALID_ZONE)
-        _zonePlayerCountMap[newZone]++;
+    ++_zonePlayerCountMap[newZone];
 }
 
 void Map::Update(uint32 t_diff)
@@ -3101,11 +3076,11 @@ void Map::AddRespawnInfo(RespawnInfo& info, bool replace)
 
     RespawnInfoMap& bySpawnIdMap = GetRespawnMapForType(info.type);
     
-    RespawnInfo*& existing = bySpawnIdMap[info.spawnId]; // get a reference so we only do the map lookup once
-
-    if (existing) // spawnid already has a respawn scheduled
+    auto it = bySpawnIdMap.find(info.spawnId);
+    if (it != bySpawnIdMap.end()) // spawnid already has a respawn scheduled
     {
-        if (replace || info.respawnTime < existing->respawnTime)
+        RespawnInfo* const existing = it->second;
+        if (replace || info.respawnTime < existing->respawnTime) // delete existing in this case
             DeleteRespawnInfo(existing);
         else // don't delete existing, instead replace respawn time so caller saves the correct time
         {
@@ -3113,10 +3088,12 @@ void Map::AddRespawnInfo(RespawnInfo& info, bool replace)
             return;
         }
     }
+
     // if we get to this point, we should insert the respawninfo (there either was no prior entry, or it was deleted already)
     RespawnInfo * ri = new RespawnInfo(info);
-    existing = ri;
     ri->handle = _respawnTimes.push(ri);
+    bool success = bySpawnIdMap.emplace(ri->spawnId, ri).second;
+    ASSERT(success, "Insertion of respawn info with id (%u,%u) into spawn id map failed - state desync.", uint32(ri->type), ri->spawnId);
 }
 
 static void PushRespawnInfoFrom(RespawnVector& data, RespawnInfoMap const& map, uint32 zoneId)

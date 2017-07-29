@@ -764,8 +764,8 @@ class TC_GAME_API World
         void RemoveOldCorpses();
         void TriggerGuidWarning();
         void TriggerGuidAlert();
-        bool isGuidWarning() { return guidWarn; }
-        bool isGuidAlert() { return guidAlert; }
+        bool IsGuidWarning() { return _guidWarn; }
+        bool IsGuidAlert() { return _guidAlert; }
 
     protected:
         void _UpdateGameTime();
@@ -866,15 +866,15 @@ class TC_GAME_API World
         void DoGuidAlertRestart();
         QueryCallbackProcessor _queryProcessor;
 
-        std::string respawnWarningMsg;
-        std::string alertRestartReason;
+        std::string _guidWarningMsg;
+        std::string _alertRestartReason;
 
         std::mutex _guidAlertLock;
 
-        bool guidWarn;
-        bool guidAlert;
-        uint32 warnDiff;
-        time_t warnShutdownTime;
+        bool _guidWarn;
+        bool _guidAlert;
+        uint32 _warnDiff;
+        time_t _warnShutdownTime;
 };
 
 TC_GAME_API extern Realm realm;

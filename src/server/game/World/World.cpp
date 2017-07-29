@@ -135,10 +135,10 @@ World::World()
     memset(m_bool_configs, 0, sizeof(m_bool_configs));
     memset(m_float_configs, 0, sizeof(m_float_configs));
 
-    guidWarn = false;
-    guidAlert = false;
-    warnDiff = 0;
-    warnShutdownTime = time(NULL);
+    _guidWarn = false;
+    _guidAlert = false;
+    _warnDiff = 0;
+    _warnShutdownTime = time(NULL);
 }
 
 /// World destructor
@@ -210,13 +210,13 @@ void World::TriggerGuidWarning()
     time_t today = (gameTime / DAY) * DAY;
 
     // Check if our window to restart today has passed. 5 mins until quiet time
-    while (gameTime >= (today + (m_int_configs[CONFIG_RESPAWN_RESTARTQUIETTIME]) * HOUR) - 1810)
+    while (gameTime >= (today + (getIntConfig(CONFIG_RESPAWN_RESTARTQUIETTIME) * HOUR) - 1810))
         today += DAY;
 
     // Schedule restart for 30 minutes before quiet time, or as long as we have
-    warnShutdownTime = today + (m_int_configs[CONFIG_RESPAWN_RESTARTQUIETTIME] * HOUR) - 1800;
+    _warnShutdownTime = today + (getIntConfig(CONFIG_RESPAWN_RESTARTQUIETTIME) * HOUR) - 1800;
 
-    guidWarn = true;
+    _guidWarn = true;
     SendGuidWarning();
 }
 
@@ -226,8 +226,8 @@ void World::TriggerGuidAlert()
     std::lock_guard<std::mutex> lock(_guidAlertLock);
 
     DoGuidAlertRestart();
-    guidAlert = true;
-    guidWarn = false;
+    _guidAlert = true;
+    _guidWarn = false;
 }
 
 void World::DoGuidWarningRestart()
@@ -236,7 +236,7 @@ void World::DoGuidWarningRestart()
         return;
 
     ShutdownServ(1800, SHUTDOWN_MASK_RESTART, RESTART_EXIT_CODE);
-    warnShutdownTime += HOUR;
+    _warnShutdownTime += HOUR;
 }
 
 void World::DoGuidAlertRestart()
@@ -244,14 +244,14 @@ void World::DoGuidAlertRestart()
     if (m_ShutdownTimer)
         return;
 
-    ShutdownServ(300, SHUTDOWN_MASK_RESTART, RESTART_EXIT_CODE, alertRestartReason);
+    ShutdownServ(300, SHUTDOWN_MASK_RESTART, RESTART_EXIT_CODE, _alertRestartReason);
 }
 
 void World::SendGuidWarning()
 {
-    if (!m_ShutdownTimer && guidWarn && m_int_configs[CONFIG_RESPAWN_GUIDWARNING_FREQUENCY] > 0)
-        SendServerMessage(SERVER_MSG_STRING, respawnWarningMsg.c_str());
-    warnDiff = 0;
+    if (!m_ShutdownTimer && _guidWarn && getIntConfig(CONFIG_RESPAWN_GUIDWARNING_FREQUENCY) > 0)
+        SendServerMessage(SERVER_MSG_STRING, _guidWarningMsg.c_str());
+    _warnDiff = 0;
 }
 
 /// Find a session by its id
@@ -1291,8 +1291,8 @@ void World::LoadConfigSettings(bool reload)
         m_float_configs[CONFIG_RESPAWN_DYNAMICRATE_GAMEOBJECT] = 10.0f;
     }
     m_int_configs[CONFIG_RESPAWN_DYNAMICMINIMUM_GAMEOBJECT] = sConfigMgr->GetIntDefault("Respawn.DynamicMinimumGameObject", 10);
-    respawnWarningMsg = sConfigMgr->GetStringDefault("Respawn.WarningMessage", "There will be an unscheduled server restart at 03:00. The server will be available again shortly after.");
-    alertRestartReason = sConfigMgr->GetStringDefault("Respawn.AlertRestartReason", "Urgent Maintenance");
+    _guidWarningMsg = sConfigMgr->GetStringDefault("Respawn.WarningMessage", "There will be an unscheduled server restart at 03:00. The server will be available again shortly after.");
+    _alertRestartReason = sConfigMgr->GetStringDefault("Respawn.AlertRestartReason", "Urgent Maintenance");
     m_int_configs[CONFIG_RESPAWN_GUIDWARNING_FREQUENCY] = sConfigMgr->GetIntDefault("Respawn.WarningFrequency", 1800);
     ///- Read the "Data" directory from the config file
     std::string dataPath = sConfigMgr->GetStringDefault("DataDir", "./");
@@ -2398,12 +2398,12 @@ void World::Update(uint32 diff)
     sInstanceSaveMgr->Update();
 
     // Check for shutdown warning
-    if (guidWarn && !guidAlert)
+    if (_guidWarn && !_guidAlert)
     {
-        warnDiff += diff;
-        if (GameTime::GetGameTime() >= warnShutdownTime)
+        _warnDiff += diff;
+        if (GameTime::GetGameTime() >= _warnShutdownTime)
             DoGuidWarningRestart();
-        else if (warnDiff > (m_int_configs[CONFIG_RESPAWN_GUIDWARNING_FREQUENCY]) * IN_MILLISECONDS)
+        else if (_warnDiff > getIntConfig(CONFIG_RESPAWN_GUIDWARNING_FREQUENCY) * IN_MILLISECONDS)
             SendGuidWarning();
     }
 

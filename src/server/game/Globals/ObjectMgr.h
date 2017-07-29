@@ -21,11 +21,12 @@
 
 #include "Common.h"
 #include "ConditionMgr.h"
-#include "Containers.h"
 #include "CreatureData.h"
 #include "DatabaseEnvFwd.h"
+#include "Errors.h"
 #include "GameObjectData.h"
 #include "ItemTemplate.h"
+#include "IteratorPair.h"
 #include "NPCHandler.h"
 #include "ObjectDefines.h"
 #include "ObjectGuid.h"
@@ -1216,7 +1217,7 @@ class TC_GAME_API ObjectMgr
         bool SpawnGroupDespawn(uint32 groupId, Map* map, bool deleteRespawnTimes = false);
         void SetSpawnGroupActive(uint32 groupId, bool state) { auto it = _spawnGroupDataStore.find(groupId); if (it != _spawnGroupDataStore.end()) it->second.isActive = state; }
         bool IsSpawnGroupActive(uint32 groupId) const { auto it = _spawnGroupDataStore.find(groupId); return (it != _spawnGroupDataStore.end()) && it->second.isActive; }
-        Trinity::Containers::IteratorPair<SpawnGroupLinkContainer::const_iterator> GetSpawnDataForGroup(uint32 groupId) const { return _spawnGroupMapStore.equal_range(groupId); }
+        Trinity::IteratorPair<SpawnGroupLinkContainer::const_iterator> GetSpawnDataForGroup(uint32 groupId) const { return Trinity::Containers::MapEqualRange(_spawnGroupMapStore, groupId); }
 
         MailLevelReward const* GetMailLevelReward(uint32 level, uint32 raceMask) const
         {
