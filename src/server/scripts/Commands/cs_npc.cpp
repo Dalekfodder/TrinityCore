@@ -348,7 +348,7 @@ public:
             data.spawnId = guid;
             data.id = id;
             data.phaseMask = chr->GetPhaseMaskForSpawn();
-            data.Relocate(chr->GetTransOffsetX(), chr->GetTransOffsetY(), chr->GetTransOffsetZ(), chr->GetTransOffsetO());
+            data.spawnPoint.Relocate(chr->GetTransOffsetX(), chr->GetTransOffsetY(), chr->GetTransOffsetZ(), chr->GetTransOffsetO());
 
             Creature* creature = trans->CreateNPCPassenger(guid, &data);
 
@@ -894,7 +894,7 @@ public:
                 return false;
             }
 
-            if (player->GetMapId() != data->GetMapId())
+            if (player->GetMapId() != data->spawnPoint.GetMapId())
             {
                 handler->PSendSysMessage(LANG_COMMAND_CREATUREATSAMEMAP, lowguid);
                 handler->SetSentErrorMessage(true);
@@ -906,7 +906,7 @@ public:
 
         if (creature)
         {
-            sObjectMgr->NewOrExistCreatureData(creature->GetSpawnId()).Relocate(*player);
+            sObjectMgr->NewOrExistCreatureData(creature->GetSpawnId()).spawnPoint.Relocate(*player);
             creature->UpdatePosition(*player);
             creature->GetMotionMaster()->Initialize();
             if (creature->IsAlive())                            // dead creature will reset movement generator at respawn

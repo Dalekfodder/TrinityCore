@@ -681,7 +681,7 @@ public:
             CreatureData const* data = sObjectMgr->GetCreatureData(ri->spawnId);
             if (!data)
                 continue;
-            if (range && !player->IsInDist(data, range))
+            if (range && !player->IsInDist(data->spawnPoint, range))
                 continue;
             uint32 gridY = ri->gridId / MAX_NUMBER_OF_GRIDS;
             uint32 gridX = ri->gridId % MAX_NUMBER_OF_GRIDS;
@@ -702,7 +702,7 @@ public:
             GameObjectData const* data = sObjectMgr->GetGameObjectData(ri->spawnId);
             if (!data)
                 continue;
-            if (range && !player->IsInDist(data, range))
+            if (range && !player->IsInDist(data->spawnPoint, range))
                 continue;
             uint32 gridY = ri->gridId / MAX_NUMBER_OF_GRIDS;
             uint32 gridX = ri->gridId % MAX_NUMBER_OF_GRIDS;

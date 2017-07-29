@@ -1219,12 +1219,9 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
     data.displayid = displayId;
     data.equipmentId = GetCurrentEquipmentId();
     if (!GetTransport())
-        data.WorldRelocate(this);
+        data.spawnPoint.WorldRelocate(this);
     else
-    {
-        data.m_mapId = mapid;
-        data.Relocate(GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), GetTransOffsetO());
-    }
+        data.spawnPoint.WorldRelocate(mapid, GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), GetTransOffsetO());
 
     data.spawntimesecs = m_respawnDelay;
     // prevent add data integrity problems
@@ -1497,11 +1494,11 @@ bool Creature::LoadFromDB(ObjectGuid::LowType spawnId, Map* map, bool addToMap, 
         return false;
     }
 
-    if (!Create(map->GenerateLowGuid<HighGuid::Unit>(), map, data->phaseMask, data->id, *data, data, 0U , !m_respawnCompatibilityMode))
+    if (!Create(map->GenerateLowGuid<HighGuid::Unit>(), map, data->phaseMask, data->id, data->spawnPoint, data, 0U , !m_respawnCompatibilityMode))
         return false;
 
     //We should set first home position, because then AI calls home movement
-    SetHomePosition(*data);
+    SetHomePosition(data->spawnPoint);
 
     m_deathState = ALIVE;
 
@@ -1516,9 +1513,9 @@ bool Creature::LoadFromDB(ObjectGuid::LowType spawnId, Map* map, bool addToMap, 
         m_deathState = DEAD;
         if (CanFly())
         {
-            float tz = map->GetHeight(GetPhaseMask(), data->GetPositionX(), data->GetPositionY(), data->GetPositionZ(), true, MAX_FALL_DISTANCE);
-            if (data->GetPositionZ() - tz > 0.1f && Trinity::IsValidMapCoord(tz))
-                Relocate(data->GetPositionX(), data->GetPositionY(), tz);
+            float tz = map->GetHeight(GetPhaseMask(), data->spawnPoint, true, MAX_FALL_DISTANCE);
+            if (data->spawnPoint.GetPositionZ() - tz > 0.1f && Trinity::IsValidMapCoord(tz))
+                Relocate(data->spawnPoint.GetPositionX(), data->spawnPoint.GetPositionY(), tz);
         }
     }
 
@@ -2540,32 +2537,26 @@ time_t Creature::GetRespawnTimeEx() const
 
 void Creature::GetRespawnPosition(float &x, float &y, float &z, float* ori, float* dist) const
 {
-    if (m_spawnId)
+    if (m_creatureData)
     {
-        // for npcs on transport, this will return transport offset
-        if (CreatureData const* data = sObjectMgr->GetCreatureData(GetSpawnId()))
-        {
-            if (ori)
-                data->GetPosition(x, y, z, *ori);
-            else
-                data->GetPosition(x, y, z);
+        if (ori)
+            m_creatureData->spawnPoint.GetPosition(x, y, z, *ori);
+        else
+            m_creatureData->spawnPoint.GetPosition(x, y, z);
 
-            if (dist)
-                *dist = data->spawndist;
-
-            return;
-        }
+        if (dist)
+            *dist = m_creatureData->spawndist;
     }
-
-    // changed this from current position to home position, fixes world summons with infinite duration (wg npcs for example)
-    Position const& homePos = GetHomePosition();
-    if (ori)
-        homePos.GetPosition(x, y, z, *ori);
     else
-        homePos.GetPosition(x, y, z);
-
-    if (dist)
-        *dist = 0;
+    {
+        Position const& homePos = GetHomePosition();
+        if (ori)
+            homePos.GetPosition(x, y, z, *ori);
+        else
+            homePos.GetPosition(x, y, z);
+        if (dist)
+            *dist = 0;
+    }
 }
 
 void Creature::AllLootRemovedFromCorpse()

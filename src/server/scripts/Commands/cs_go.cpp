@@ -281,9 +281,9 @@ public:
             return false;
         }
         
-        if (!MapManager::IsValidMapCoord(*goData) || sObjectMgr->IsTransportMap(goData->GetMapId()))
+        if (!MapManager::IsValidMapCoord(goData->spawnPoint) || sObjectMgr->IsTransportMap(goData->spawnPoint.GetMapId()))
         {
-            handler->PSendSysMessage(LANG_INVALID_TARGET_COORD, goData->GetPositionX(), goData->GetPositionY(), goData->GetMapId());
+            handler->PSendSysMessage(LANG_INVALID_TARGET_COORD, goData->spawnPoint.GetPositionX(), goData->spawnPoint.GetPositionY(), goData->spawnPoint.GetMapId());
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -298,7 +298,7 @@ public:
         else
             player->SaveRecallPosition();
 
-        player->TeleportTo(*goData);
+        player->TeleportTo(goData->spawnPoint);
         return true;
     }
 
