@@ -3052,7 +3052,7 @@ void Map::Respawn(RespawnInfo* info, bool force, SQLTransaction dbTrans)
     uint32 const gridId = info->gridId;
     ObjectGuid::LowType const spawnId = info->spawnId;
     RemoveRespawnTime(info);
-    DoRespawn(type, gridId, spawnId);
+    DoRespawn(type, spawnId, gridId);
 }
 
 void Map::Respawn(RespawnVector& respawnData, bool force, SQLTransaction dbTrans)
