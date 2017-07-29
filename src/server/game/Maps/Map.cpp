@@ -759,7 +759,7 @@ void Map::Update(uint32 t_diff)
         _respawnCheckTimer = sWorld->getIntConfig(CONFIG_RESPAWN_MINCHECKINTERVALMS);
     }
     else
-        _respawnCheckTimer -= t_diff,
+        _respawnCheckTimer -= t_diff;
 
     /// update active cells around players and active objects
     resetMarkedCells();
@@ -2698,10 +2698,7 @@ void Map::GetFullTerrainStatusForPosition(float x, float y, float z, PositionFul
     else
     {
         data.floorZ = mapHeight;
-        if (gmap)
-            data.areaId = gmap->getArea(x, y);
-        else
-            data.areaId = 0;
+        data.areaId = gmap->getArea(x, y);
 
         if (!data.areaId)
             data.areaId = i_mapEntry->linked_zone;
