@@ -967,7 +967,7 @@ bool GameObject::LoadFromDB(ObjectGuid::LowType spawnId, Map* map, bool addToMap
     uint32 artKit = data->artKit;
 
     m_spawnId = spawnId;
-    m_respawnCompatibilityMode = (data->spawnGroupData->flags & SPAWNGROUP_FLAG_COMPATIBILITY_MODE);
+    m_respawnCompatibilityMode = ((data->spawnGroupData->flags & SPAWNGROUP_FLAG_COMPATIBILITY_MODE) != 0);
     if (!Create(map->GenerateLowGuid<HighGuid::GameObject>(), entry, map, phaseMask, data->spawnPoint, data->rotation, animprogress, go_state, artKit, !m_respawnCompatibilityMode))
         return false;
 

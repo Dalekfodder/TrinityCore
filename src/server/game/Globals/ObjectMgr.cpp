@@ -1953,7 +1953,7 @@ ObjectGuid::LowType ObjectMgr::AddGameObjectData(uint32 entry, uint32 mapId, Pos
     data.phaseMask      = PHASEMASK_NORMAL;
     data.artKit         = goinfo->type == GAMEOBJECT_TYPE_CAPTURE_POINT ? 21 : 0;
     data.dbData         = false;
-    data.spawnGroupData = GetDefaultSpawnGroup();
+    data.spawnGroupData = GetLegacySpawnGroup();
 
     AddGameobjectToGrid(spawnId, &data);
 
@@ -2007,7 +2007,7 @@ ObjectGuid::LowType ObjectMgr::AddCreatureData(uint32 entry, uint32 mapId, Posit
     data.npcflag = cInfo->npcflag;
     data.unit_flags = cInfo->unit_flags;
     data.dynamicflags = cInfo->dynamicflags;
-    data.spawnGroupData = GetDefaultSpawnGroup();
+    data.spawnGroupData = GetLegacySpawnGroup();
 
     AddCreatureToGrid(spawnId, &data);
 
@@ -2213,11 +2213,15 @@ void ObjectMgr::LoadSpawnGroupTemplates()
             uint32 flags = fields[2].GetUInt32();
             if (flags & ~SPAWNGROUP_FLAGS_ALL)
             {
-                group.flags = SpawnGroupFlags(flags & SPAWNGROUP_FLAGS_ALL);
+                flags &= SPAWNGROUP_FLAGS_ALL;
                 TC_LOG_ERROR("server.loading", "Invalid spawn group flag %u on group ID %u (%s), reduced to valid flag %u.", flags, groupId, group.name.c_str(), uint32(group.flags));
             }
-            else
-                group.flags = SpawnGroupFlags(flags);
+            if (flags & SPAWNGROUP_FLAG_SYSTEM && flags & SPAWNGROUP_FLAG_MANUAL_SPAWN)
+            {
+                flags &= ~SPAWNGROUP_FLAG_MANUAL_SPAWN;
+                TC_LOG_ERROR("server.loading", "System spawn group %u (%s) has invalid manual spawn flag. Ignored.", groupId, group.name.c_str());
+            }
+            group.flags = SpawnGroupFlags(flags);
             group.isActive = !(group.flags & SPAWNGROUP_FLAG_MANUAL_SPAWN);
         } while (result->NextRow());
     }
@@ -2230,6 +2234,16 @@ void ObjectMgr::LoadSpawnGroupTemplates()
         data.name = "Default Group";
         data.mapId = 0;
         data.flags = SPAWNGROUP_FLAG_SYSTEM;
+        data.isActive = true;
+    }
+    if (_spawnGroupDataStore.find(1) == _spawnGroupDataStore.end())
+    {
+        TC_LOG_ERROR("server.loading", "Default legacy spawn group (index 1) is missing from DB! Manually inserted.");
+        SpawnGroupTemplateData&data = _spawnGroupDataStore[1];
+        data.groupId = 1;
+        data.name = "Legacy Group";
+        data.mapId = 0;
+        data.flags = SpawnGroupFlags(SPAWNGROUP_FLAG_SYSTEM | SPAWNGROUP_FLAG_COMPATIBILITY_MODE);
         data.isActive = true;
     }
 
