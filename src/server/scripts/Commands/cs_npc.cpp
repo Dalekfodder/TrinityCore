@@ -779,7 +779,7 @@ public:
         std::string defRespawnDelayStr = secsToTimeString(target->GetRespawnDelay(), true);
 
         handler->PSendSysMessage(LANG_NPCINFO_CHAR, target->GetSpawnId(), target->GetGUID().GetCounter(), faction, npcflags, Entry, displayid, nativeid);
-        if (target->GetCreatureData())
+        if (target->GetCreatureData() && target->GetCreatureData()->spawnGroupData->groupId)
         {
             if (SpawnGroupTemplateData const* groupData = target->GetCreatureData()->spawnGroupData)
                 handler->PSendSysMessage(LANG_SPAWNINFO_GROUP_ID, groupData->name.c_str(), groupData->groupId, groupData->flags, groupData->isActive);

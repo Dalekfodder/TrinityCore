@@ -129,16 +129,15 @@ void LoadHelper(CellGuidSet const& guid_set, CellCoord &cell, GridRefManager<T> 
 
             if (obj->GetTypeId() == TYPEID_UNIT)
             {
-                // If creature in manual spawn group, don't spawn here, unless group is already active.
                 CreatureData const* cdata = sObjectMgr->GetCreatureData(guid);
-                SpawnGroupTemplateData const* group = cdata ? cdata->spawnGroupData : nullptr;
-                uint32 groupFlags = group ? group->flags : 0;
-                if ((groupFlags & SPAWNGROUP_FLAG_MANUAL_SPAWN) && !group->isActive)
+                ASSERT(cdata, "Tried to load creature with spawnId %u, but no such creature exists.", guid);
+                SpawnGroupTemplateData const* const group = cdata->spawnGroupData;
+                // If creature in manual spawn group, don't spawn here, unless group is already active.
+                if ((group->flags & SPAWNGROUP_FLAG_MANUAL_SPAWN) && !group->isActive)
                     continue;
 
                 // If script is blocking spawn, don't spawn but queue for a re-check in a little bit
-                bool compatibleMode = !group || (groupFlags & SPAWNGROUP_FLAG_COMPATIBILITY_MODE);
-                if (!compatibleMode && !sScriptMgr->CanSpawn(guid, cdata->id, cdata, map))
+                if (!(group->flags & SPAWNGROUP_FLAG_COMPATIBILITY_MODE) && !sScriptMgr->CanSpawn(guid, cdata->id, cdata, map))
                 {
                     map->SaveRespawnTime(SPAWN_TYPE_CREATURE, guid, cdata->id, time(NULL) + urand(4,7), map->GetZoneId(cdata->spawnPoint), Trinity::ComputeGridCoord(cdata->spawnPoint.GetPositionX(), cdata->spawnPoint.GetPositionY()).GetId(), false);
                     continue;
@@ -148,7 +147,8 @@ void LoadHelper(CellGuidSet const& guid_set, CellCoord &cell, GridRefManager<T> 
             {
                 // If gameobject in manual spawn group, don't spawn here, unless group is already active.
                 GameObjectData const* godata = sObjectMgr->GetGameObjectData(guid);
-                if (godata && godata->spawnGroupData && (godata->spawnGroupData->flags & SPAWNGROUP_FLAG_MANUAL_SPAWN) && !godata->spawnGroupData->isActive)
+                ASSERT(godata, "Tried to load gameobject with spawnId %u, but no such object exists.", guid);
+                if ((godata->spawnGroupData->flags & SPAWNGROUP_FLAG_MANUAL_SPAWN) && !godata->spawnGroupData->isActive)
                     continue;
             }
 

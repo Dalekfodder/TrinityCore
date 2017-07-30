@@ -284,20 +284,16 @@ void npc_escortAI::UpdateAI(uint32 diff)
             {
                 TC_LOG_DEBUG("scripts", "EscortAI failed because player/group was to far away or not found");
 
-                uint32 groupFlags = 0;
-
+                bool isEscort = false;
                 if (CreatureData const* cdata = me->GetCreatureData())
-                {
-                    if (SpawnGroupTemplateData const* groupData = cdata->spawnGroupData)
-                        groupFlags = groupData->flags;
-                }
+                    isEscort = (sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) && (cdata->spawnGroupData->flags & SPAWNGROUP_FLAG_ESCORTQUESTNPC));
 
-                if (m_bCanInstantRespawn && !(sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) && (groupFlags & SPAWNGROUP_FLAG_ESCORTQUESTNPC)))
+                if (m_bCanInstantRespawn && !isEscort)
                 {
                     me->setDeathState(JUST_DIED);
                     me->Respawn();
                 }
-                else if (m_bCanInstantRespawn && (sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) && (groupFlags & SPAWNGROUP_FLAG_ESCORTQUESTNPC)))
+                else if (m_bCanInstantRespawn && isEscort)
                     me->GetMap()->RemoveRespawnTime(SPAWN_TYPE_CREATURE, me->GetSpawnId(), true);
                 else
                     me->DespawnOrUnsummon();

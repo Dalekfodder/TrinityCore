@@ -2934,7 +2934,7 @@ bool Map::CheckRespawn(RespawnInfo* info)
                 bool isEscort = false;
                 if (sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) && info->type == SPAWN_TYPE_CREATURE)
                     if (CreatureData const* cdata = sObjectMgr->GetCreatureData(info->spawnId))
-                        if (cdata->spawnGroupData && (cdata->spawnGroupData->flags & SPAWNGROUP_FLAG_ESCORTQUESTNPC))
+                        if (cdata->spawnGroupData->flags & SPAWNGROUP_FLAG_ESCORTQUESTNPC)
                             isEscort = true;
 
                 auto range = _creatureBySpawnIdStore.equal_range(info->spawnId);
@@ -3232,8 +3232,7 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
     uint32 const okFlags = SPAWNGROUP_FLAG_DYNAMIC_SPAWN_RATE | (sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) ? SPAWNGROUP_FLAG_ESCORTQUESTNPC : 0);
 
     SpawnData const* data = sObjectMgr->GetSpawnData(type, spawnId);
-    SpawnGroupTemplateData const* groupData = data ? data->spawnGroupData : nullptr;
-    if (!groupData || !(groupData->flags & okFlags))
+    if (!data || !(data->spawnGroupData->flags & okFlags))
         return;
 
     respawnDelay = std::max<uint32>(ceil(respawnDelay * adjustFactor), timeMinimum);

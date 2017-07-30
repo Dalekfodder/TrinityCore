@@ -1222,7 +1222,6 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
         data.spawnPoint.WorldRelocate(this);
     else
         data.spawnPoint.WorldRelocate(mapid, GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), GetTransOffsetO());
-
     data.spawntimesecs = m_respawnDelay;
     // prevent add data integrity problems
     data.spawndist = GetDefaultMovementType() == IDLE_MOTION_TYPE ? 0.0f : m_respawnradius;
@@ -1236,6 +1235,8 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
     data.npcflag = npcflag;
     data.unit_flags = unit_flags;
     data.dynamicflags = dynamicflags;
+    if (!data.spawnGroupData)
+        data.spawnGroupData = sObjectMgr->GetDefaultSpawnGroup();
 
     // update in DB
     SQLTransaction trans = WorldDatabase.BeginTransaction();
@@ -1482,7 +1483,7 @@ bool Creature::LoadFromDB(ObjectGuid::LowType spawnId, Map* map, bool addToMap, 
 
     m_spawnId = spawnId;
 
-    m_respawnCompatibilityMode = !data->spawnGroupData || (data->spawnGroupData->flags & SPAWNGROUP_FLAG_COMPATIBILITY_MODE);
+    m_respawnCompatibilityMode = (data->spawnGroupData->flags & SPAWNGROUP_FLAG_COMPATIBILITY_MODE);
     m_creatureData = data;
     m_respawnradius = data->spawndist;
     m_respawnDelay = data->spawntimesecs;

@@ -1952,7 +1952,8 @@ ObjectGuid::LowType ObjectMgr::AddGameObjectData(uint32 entry, uint32 mapId, Pos
     data.goState        = GO_STATE_READY;
     data.phaseMask      = PHASEMASK_NORMAL;
     data.artKit         = goinfo->type == GAMEOBJECT_TYPE_CAPTURE_POINT ? 21 : 0;
-    data.dbData = false;
+    data.dbData         = false;
+    data.spawnGroupData = GetDefaultSpawnGroup();
 
     AddGameobjectToGrid(spawnId, &data);
 
@@ -2006,6 +2007,7 @@ ObjectGuid::LowType ObjectMgr::AddCreatureData(uint32 entry, uint32 mapId, Posit
     data.npcflag = cInfo->npcflag;
     data.unit_flags = cInfo->unit_flags;
     data.dynamicflags = cInfo->dynamicflags;
+    data.spawnGroupData = GetDefaultSpawnGroup();
 
     AddCreatureToGrid(spawnId, &data);
 
@@ -2252,6 +2254,7 @@ void ObjectMgr::LoadSpawnGroups()
         return;
     }
 
+    uint32 numMembers = 0;
     do
     {
         Field* fields = result->Fetch();
@@ -2269,13 +2272,18 @@ void ObjectMgr::LoadSpawnGroups()
         ObjectGuid::LowType spawnId = fields[2].GetUInt32();
 
         SpawnData const* data = GetSpawnData(spawnType, spawnId);
-        auto it = _spawnGroupDataStore.find(groupId);
         if (!data)
         {
             TC_LOG_ERROR("server.loading", "Spawn data with ID (%u,%u) not found, but is listed as a member of spawn group %u!", uint32(spawnType), spawnId, groupId);
             continue;
         }
-        else if (it == _spawnGroupDataStore.end())
+        else if (data->spawnGroupData->groupId)
+        {
+            TC_LOG_ERROR("server.loading", "Spawn with ID (%u,%u) is listed as a member of spawn group %u, but is already a member of spawn group %u. Skipping.", uint32(spawnType), spawnId, groupId, data->spawnGroupData->groupId);
+            continue;
+        }
+        auto it = _spawnGroupDataStore.find(groupId);
+        if (it == _spawnGroupDataStore.end())
         {
             TC_LOG_ERROR("server.loading", "Spawn group %u assigned to spawn ID (%u,%u), but group is found!", groupId, uint32(spawnType), spawnId);
             continue;
@@ -2291,17 +2299,22 @@ void ObjectMgr::LoadSpawnGroups()
                 continue;
             }
             const_cast<SpawnData*>(data)->spawnGroupData = &groupTemplate;
-            _spawnGroupMapStore.emplace(groupId, data);
+            if (!(groupTemplate.flags & SPAWNGROUP_FLAG_SYSTEM))
+                _spawnGroupMapStore.emplace(groupId, data);
+            ++numMembers;
         }
     } while (result->NextRow());
 
-    TC_LOG_INFO("server.loading", ">> Loaded " SZFMTD " spawn group members in %u ms", _spawnGroupMapStore.size(), GetMSTimeDiffToNow(oldMSTime));
+    TC_LOG_INFO("server.loading", ">> Loaded %u spawn group members in %u ms", numMembers, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void ObjectMgr::OnDeleteSpawnData(SpawnData const* data)
 {
-    if (!data || !data->spawnGroupData || !data->spawnGroupData->groupId)
+    auto templateIt = _spawnGroupDataStore.find(data->spawnGroupData->groupId);
+    ASSERT(templateIt != _spawnGroupDataStore.end(), "Creature data for (%u,%u) is being deleted and has invalid spawn group index %u!", uint32(data->type), data->spawnId, data->spawnGroupData->groupId);
+    if (templateIt->second.flags & SPAWNGROUP_FLAG_SYSTEM) // system groups don't store their members in the map
         return;
+
     auto pair = _spawnGroupMapStore.equal_range(data->spawnGroupData->groupId);
     for (auto it = pair.first; it != pair.second; ++it)
     {
@@ -6728,12 +6741,16 @@ bool ObjectMgr::SpawnGroupSpawn(uint32 groupId, Map* map, bool ignoreRespawn, bo
         time_t respawnTime = map->GetRespawnTime(data->type, data->spawnId);
         if (respawnTime && respawnTime > time(NULL))
         {
-            if (!ignoreRespawn)
+            if (!force && !ignoreRespawn)
                 continue;
 
             // we need to remove the respawn time, otherwise we'd end up double spawning
-            map->RemoveRespawnTime(data->type, data->spawnId);
+            map->RemoveRespawnTime(data->type, data->spawnId, false);
         }
+
+        // don't spawn if the grid isn't loaded (will be handled in grid loader)
+        if (!map->IsGridLoaded(data->spawnPoint))
+            continue;
 
         // Everything OK, now do the actual (re)spawn
         switch (data->type)
