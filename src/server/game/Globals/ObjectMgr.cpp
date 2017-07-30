@@ -2300,7 +2300,7 @@ void ObjectMgr::LoadSpawnGroups()
 
 void ObjectMgr::OnDeleteSpawnData(SpawnData const* data)
 {
-    if (!data->spawnGroupData->groupId)
+    if (!data || !data->spawnGroupData || !data->spawnGroupData->groupId)
         return;
     auto pair = _spawnGroupMapStore.equal_range(data->spawnGroupData->groupId);
     for (auto it = pair.first; it != pair.second; ++it)
