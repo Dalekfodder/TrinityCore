@@ -1278,6 +1278,7 @@ class TC_GAME_API ObjectMgr
                 ASSERT(false, "Invalid spawn object type %u", uint32(type));
             return nullptr;
         }
+        void OnDeleteSpawnData(SpawnData const* data);
         CreatureData const* GetCreatureData(ObjectGuid::LowType guid) const
         {
             CreatureDataContainer::const_iterator itr = _creatureDataStore.find(guid);

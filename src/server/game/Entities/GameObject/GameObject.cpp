@@ -1012,17 +1012,22 @@ void GameObject::DeleteFromDB()
     GetMap()->RemoveRespawnTime(SPAWN_TYPE_GAMEOBJECT, m_spawnId);
     sObjectMgr->DeleteGameObjectData(m_spawnId);
 
+    SQLTransaction trans = WorldDatabase.BeginTransaction();
+
     PreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_GAMEOBJECT);
-
     stmt->setUInt32(0, m_spawnId);
+    trans->Append(stmt);
 
-    WorldDatabase.Execute(stmt);
+    stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_SPAWNGROUP_MEMBER);
+    stmt->setUInt8(0, uint8(SPAWN_TYPE_GAMEOBJECT));
+    stmt->setUInt32(1, m_spawnId);
+    trans->Append(stmt);
 
     stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_EVENT_GAMEOBJECT);
-
     stmt->setUInt32(0, m_spawnId);
-
-    WorldDatabase.Execute(stmt);
+    trans->Append(stmt);
+    
+    WorldDatabase.CommitTransaction(trans);
 }
 
 /*********************************************************/

@@ -1620,6 +1620,11 @@ void Creature::DeleteFromDB()
     stmt->setUInt32(0, m_spawnId);
     trans->Append(stmt);
 
+    stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_SPAWNGROUP_MEMBER);
+    stmt->setUInt8(0, uint8(SPAWN_TYPE_CREATURE));
+    stmt->setUInt32(1, m_spawnId);
+    trans->Append(stmt);
+
     stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_CREATURE_ADDON);
     stmt->setUInt32(0, m_spawnId);
     trans->Append(stmt);

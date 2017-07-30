@@ -2298,6 +2298,21 @@ void ObjectMgr::LoadSpawnGroups()
     TC_LOG_INFO("server.loading", ">> Loaded " SZFMTD " spawn group members in %u ms", _spawnGroupMapStore.size(), GetMSTimeDiffToNow(oldMSTime));
 }
 
+void ObjectMgr::OnDeleteSpawnData(SpawnData const* data)
+{
+    if (!data->spawnGroupData->groupId)
+        return;
+    auto pair = _spawnGroupMapStore.equal_range(data->spawnGroupData->groupId);
+    for (auto it = pair.first; it != pair.second; ++it)
+    {
+        if (it->second != data)
+            continue;
+        _spawnGroupMapStore.erase(it);
+        return;
+    }
+    ASSERT(false, "Spawn data (%u,%u) being removed is member of spawn group %u, but not actually listed in the lookup table for that group!", uint32(data->type), data->spawnId, data->spawnGroupData->groupId);
+}
+
 void ObjectMgr::AddGameobjectToGrid(ObjectGuid::LowType guid, GameObjectData const* data)
 {
     uint8 mask = data->spawnMask;
@@ -7710,7 +7725,10 @@ void ObjectMgr::DeleteCreatureData(ObjectGuid::LowType guid)
     // remove mapid*cellid -> guid_set map
     CreatureData const* data = GetCreatureData(guid);
     if (data)
+    {
         RemoveCreatureFromGrid(guid, data);
+        OnDeleteSpawnData(data);
+    }
 
     _creatureDataStore.erase(guid);
 }
@@ -7720,7 +7738,10 @@ void ObjectMgr::DeleteGameObjectData(ObjectGuid::LowType guid)
     // remove mapid*cellid -> guid_set map
     GameObjectData const* data = GetGameObjectData(guid);
     if (data)
+    {
         RemoveGameobjectFromGrid(guid, data);
+        OnDeleteSpawnData(data);
+    }
 
     _gameObjectDataStore.erase(guid);
 }
